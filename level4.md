@@ -1,4 +1,4 @@
-# OAuth 로그인(Github OAuth, Access Token, Refresh Token)
+# OAuth 로그인 - Github OAuth로 연습하기
 
 이번 글에서는 OAuth의 주요 개념과 용어를 알아보고, Github OAuth를 활용한 로그인 구현을 Frontend 개발자의 관점에서 다뤄보겠습니다.
 
@@ -77,7 +77,7 @@ OAuth는 첫 번째 버전(1.0)에서 등장했고, 시간이 지나면서 보�
 
 **OAuth 2.0**
 
-토큰 기반 인증, 즉 서명 대신 액세스 토큰을 사용하여 인증을 처리합니다. 토큰 자체가 인증 수단이 되므로 구현이 훨씬 간단해졌습니다. 애플리케이션이 접근할 수 있는 **권한의 범위(scope)**를 명확하게 지정할 수 있습니다. 예를 들어, 읽기 권한만 부여하거나, 특정 데이터에만 접근할 수 있도록 제한할 수 있습니다. 모바일, 웹, 클라이언트 등 다양한 환경에서 쉽게 사용할 수 있도록 설계되었습니다.
+토큰 기반 인증, 즉 서명 대신 액세스 토큰을 사용하여 인증을 처리합니다. 또 토큰 자체가 인증 수단이 되므로 구현이 훨씬 간단해졌습니다. 애플리케이션이 접근할 수 있는 권한의 범위(scope)를 명확하게 지정할 수 있습니다. 예를 들어, 읽기 권한만 부여하거나, 특정 데이터에만 접근할 수 있도록 제한할 수 있습니다. 2.0은 모바일, 웹, 클라이언트 등 다양한 환경에서 쉽게 사용할 수 있도록 설계되었습니다.
 
 OAuth 1.0은 마치 매번 문을 열 때마다 열쇠로 문을 잠그고 푸는 과정을 거치는 것이라면, OAuth 2.0은 신뢰할 수 있는 열쇠를 주고 한동안 마음대로 드나들 수 있게 하는 방식입니다.
 
@@ -139,16 +139,16 @@ Refresh Token은 Access Token이 만료된 후, 새로운 Access Token을 발급
 
 ## OAuth 로그인 과정
 
-Authorization Server가 없는 경우에는 클라이언트가 사용자의 자격 증명(아이디, 비밀번호)을 사용해 직접 리소스 서버에 접근하여 데이터를 요청하고 응답을 받습니다.
+Authorization Server가 없는 경우에는 Client가 사용자의 자격 증명(아이디, 비밀번호)을 사용해 직접 Resource Server에 접근하여 데이터를 요청하고 응답을 받습니다.
 
-Authorization Server가 있는 경우에는 클라이언트는 먼저 Authorization Server를 통해 Access Token을 발급받고, 이후 Access Token을 사용해 리소스 서버에 직접 접근하여 데이터를 요청하고 응답을 받습니다.
+Authorization Server가 있는 경우에는 Authorization Server를 통해 Access Token을 발급받고, 이후 Access Token을 사용해 Resource Server에 직접 접근하여 데이터를 요청하고 응답을 받습니다. 그 응답 받은 데이터를 Authorization Server가 Client에 전달합니다.
 
 <br>
 <br>
 
 ## Github OAuth로 로그인을 구현해봅시다!
 
-아래에 튜토리얼로 설명이 잘 되어있습니다. 이 문서를 보면서 같이 해볼까요?
+아래에 구현 과정 설명이 잘 되어있습니다. 이 문서를 보면서 같이 해볼까요?
 
 [GitHub 앱 등록 공식 문서](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app)
 
@@ -157,11 +157,17 @@ Authorization Server가 있는 경우에는 클라이언트는 먼저 Authorizat
 ❗ 참고
 
 ```
-현재 서비스에서는 Authorization Server에 사용자 정보를 저장해야 하기 때문에 Authorization Server가 Resource Server로부터 발급받은 Access Token으로 User Info를 받은 후 Authorization Server가 자체 생성한 Access Token과 Refresh Token, 그리고 응답 받은 User Info를 Client에게 넘겨줍니다.
+현재 서비스에서는 Authorization Server에 사용자 정보를 저장해야 하기 때문에
+Authorization Server가 Resource Server로부터 발급받은 Access Token으로 User Info를 받은 후
+
+Authorization Server가 자체 생성한 Access Token과 Refresh Token,
+그리고 응답 받은 User Info를 Client에게 넘겨줍니다.
 ```
 
 ```
-따라서 Frontend 개발자가 해야할 일은 Resource Server로부터 발급 받은 Code를 Authorization Server에 보내는 일입니다. 다음은 Frontend 개발자가 할 일에 관한 튜토리얼입니다.
+따라서 Frontend 개발자가 해야할 일은
+Resource Server로부터 발급 받은 Code를 Authorization Server에 보내는 일입니다.
+다음은 Frontend 개발자가 할 일에 관한 구현 과정입니다. (React로 구현합니다.)
 
 1. OAuth application 등록하고 client_id 랑 client_secrets 값 발급
 2. 사용자를 로그인 시켜서 임시 토큰이라고 할 수 있는 code 값 얻기
@@ -318,8 +324,9 @@ const CallbackPage = () => {
 
   const handleLogin = async () => {
     try {
+      // 2. code 추출
       const params = new URLSearchParams(window.location.search);
-      const code = params.get("code"); // 2. code 추출
+      const code = params.get("code");
 
       if (!code) {
         throw new Error("Authorization code가 없습니다.");
@@ -332,11 +339,10 @@ const CallbackPage = () => {
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
       localStorage.setItem("userInfo", JSON.stringify(userInfo));
-
-      navigate("/"); // 로그인 성공 후 메인 페이지로 이동
+      navigate("/");
     } catch (error) {
       localStorage.clear();
-      alert(error.message || "로그인 중 오류가 발생했습니다.");
+      alert(error.message);
     }
   };
 
@@ -418,7 +424,7 @@ const LogoutPage = () => {
       await postLogout(); // 로그아웃 요청
       localStorage.clear(); // 로그아웃 후 로컬 스토리지 클리어
     } catch (error) {
-      alert(error.message || "로그아웃 중 오류가 발생했습니다.");
+      alert(error.message);
     }
   };
 
